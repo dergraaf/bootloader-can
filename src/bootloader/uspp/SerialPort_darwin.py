@@ -24,7 +24,7 @@
 # Purpose:   Handle low level access to serial port in MacOS.
 #
 # Author:    Isaac Barona Martinez <ibarona@gmail.com>
-# Copyright: (c) 2001 by Isaac Barona Martínez
+# Copyright: (c) 2001 by Isaac Barona Martï¿½nez
 # Licence:   LGPL
 #
 # Created:   26 June 2001
@@ -174,7 +174,7 @@ class SerialPort:
             # XXX FIX: Theorically, it should be better to put:
             # cc=[0]*termios.NCCS 
             # but it doesn't work because NCCS is 19 and self.__oldmode[6]
-            # is 32 ¿¿¿¿¿¿¿¿¿¿¿ Any help ??????????????
+            # is 32 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Any help ??????????????
             cc=[0]*len(self.__oldmode[6])
             if self.__timeout==None:
                 # A reading is only complete when VMIN characters have

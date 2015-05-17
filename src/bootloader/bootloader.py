@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """ Bootloader for AVR-Boards connected via CAN bus
 
@@ -17,15 +17,17 @@ Format:
 
 import time
 import math
-import Queue
+import queue
 import threading
+import functools
 
-import can
-import message_filter as filter
-from util import intelhex
-from util import progressbar
+from . import can
+from . import message_filter as filter
 
-__version__ = "1.5"
+from .util import intelhex
+from .util import progressbar
+
+version = "1.5"
 
 # ------------------------------------------------------------------------------
 class BootloaderFilter(filter.BaseFilter):
@@ -187,7 +189,7 @@ class Bootloader:
 		
 		self.msg_number = 0
 		self.msg_wait_for = threading.Event()
-		self.msg_queue = Queue.Queue()
+		self.msg_queue = queue.Queue()
 	
 	# --------------------------------------------------------------------------
 	def _start_bootloader_command(self):
@@ -216,7 +218,7 @@ class Bootloader:
 		self.board.pagesize = {0: 32, 1:64, 2:128, 3:256}[response.data[1]]
 		self.board.pages = (response.data[2] << 8) + response.data[3]
 		
-		#print response.data
+		#print(response.data)
 		
 		self.board.connected = True
 	
@@ -279,11 +281,11 @@ class Bootloader:
 				
 				addressAlreadySet = True
 			
-			except BootloaderException, msg:
-				print "Exception: %s" % msg
+			except BootloaderException as msg:
+				print("Exception: %s" % msg)
 				if blocksize > 1:
 					blocksize /= 2
-					print blocksize
+					print(blocksize)
 					
 					# we have to reset the buffer position
 					addressAlreadySet = False
@@ -315,21 +317,21 @@ class Bootloader:
 		"""
 		self._report_progress(self.WAITING)
 		
-		print "connecting ... ",
+		print("connecting ... ",)
 		
 		# try to connect to the bootloader
 		self.identify()
 		
-		print "ok"
-		print self.board
+		print("ok")
+		print(self.board)
 		
-		totalsize = reduce(lambda x,y: x + y, map(lambda x: len(x), segments))
+		totalsize = functools.reduce(lambda x,y: x + y, map(lambda x: len(x), segments))
 		segment_number = 0
 		
 		pagesize = self.board.pagesize
 		pages = int(math.ceil(float(totalsize) / float(pagesize)))
 		
-		print "write %i pages\n" % pages
+		print("write %i pages\n" % pages)
 		
 		if pages > self.board.pages:
 			raise BootloaderException("Programsize exceeds available Flash!")
@@ -357,7 +359,7 @@ class Bootloader:
 		self._report_progress(self.END)
 		
 		endtime = time.time()
-		print "%.2f seconds\n" % (endtime - starttime)
+		print("%.2f seconds\n" % (endtime - starttime))
 		
 		# start the new application
 		self.start_app()
@@ -401,7 +403,7 @@ class Bootloader:
 		while True:
 			try:
 				self.msg_queue.get(False, 0)
-			except Queue.Empty:
+			except queue.Empty:
 				break
 		
 		while not finished:
@@ -412,7 +414,7 @@ class Bootloader:
 			while True:
 				try:
 					response_msg = self.msg_queue.get(True, timeout)
-				except Queue.Empty:
+				except queue.Empty:
 					break;
 				else:
 					if response_msg.subject == message.subject:
@@ -423,12 +425,12 @@ class Bootloader:
 							while True:
 								try:
 									self.msg_queue.get(False, 0)
-								except Queue.Empty:
+								except queue.Empty:
 									break
 
 							break;
 						elif response_msg.type == MessageType.WRONG_NUMBER:
-							print "Warning: Wrong message number detected (board says %x, I have %x)" % (response_msg.number, message.number)
+							print("Warning: Wrong message number detected (board says %x, I have %x)" % (response_msg.number, message.number))
 							
 							# reset message number only if we just started the communication
 							if message.number == 0:
@@ -440,7 +442,7 @@ class Bootloader:
 							while True:
 								try:
 									self.msg_queue.get(False, 0.1)
-								except Queue.Empty:
+								except queue.Empty:
 									break
 							# TODO reset command stack?
 							addressAlreadySet = False    # target might have cycled power, so send address for next block
@@ -476,7 +478,7 @@ class Bootloader:
 	# --------------------------------------------------------------------------
 	def debug(self, text):
 		if self.debugmode:
-			print text
+			print(text)
 	
 	# --------------------------------------------------------------------------
 	def _report_progress(self, state, progress = 0.0):
@@ -517,80 +519,5 @@ class CommandlineClient(Bootloader):
 			self.progressbar(progress)
 		elif state == self.END:
 			self.progressbar(1.0)
-			print ""
+			print("")
 
-# ------------------------------------------------------------------------------
-if __name__ == '__main__':
-	from optparse import OptionParser
-	
-	parser = OptionParser(
-			usage   = "%prog [options] -i BOARD_ID -f FILE",
-			version = "%prog version: " + __version__ )
-	parser.add_option("-f", "--file", dest="filename", metavar="FILE",
-			help="AVR .hex File")
-	parser.add_option("-p", "--port", dest="port",
-			default="/dev/ttyUSB0",
-			help="serial port (default is '/dev/ttyUSB0')")
-	parser.add_option("-b", "--baud", dest="baudrate", 
-			default="115200",
-			help="baudrate (default is '115200')")
-	parser.add_option("-i", "--id", dest="id", help="id of the board to program")
-	parser.add_option("-e", "--erase", action="count", help="erase Chip befor programming")
-	parser.add_option("-a", "--application", action="count", dest="start_app", 
-			help="start Application (only evaluated if FILE is not specified)")
-	parser.add_option("-c", "--config", action="count", 
-			help="prints the configuration of the bootloader")
-	parser.add_option("-d", "--debug", action="count",
-			help="prints additional debug information while sending the programm")
-	parser.add_option("-t", "--type", dest="type", default="can2usb",
-			help="Select type of CAN adapter ('can2usb' or 'shell')")
-	
-	(options, args) = parser.parse_args()
-	
-	if not options.filename or not options.id:
-		print parser.get_usage()
-		exit(1)
-	
-	board_id = int(options.id, 0)
-	debug_mode = True if (options.debug) else False
-	
-	print "CAN Bootloader\n"
-	print "Port      : %s" % options.port
-	print "Board Id  : %i (0x%02x)" % (board_id, board_id)
-	if debug_mode:
-		print "debug mode active!"
-	
-	print "File      : %s" % options.filename
-	
-	hexfile = intelhex.IntelHexParser(options.filename)
-	if len(hexfile.segments) > 1:
-		print "            File has %i segments %s bytes" % (len(hexfile.segments), map(lambda x: len(x), hexfile.segments))
-	
-	print "Size      : %i Bytes" % reduce(lambda x,y: x + y, map(lambda x: len(x), hexfile.segments))
-	
-	# create a connection to the can bus
-	if options.type == "can2usb":
-		print "Interface : CAN2USB\n"
-		interface = can.Usb2Can(port = options.port, 
-								baud = int(options.baudrate, 10),
-								debug = debug_mode)
-	elif options.type == "shell":
-		print "Interface : CAN Debugger\n"
-		interface = can.CanDebugger(port = options.port, 
-								baud = int(options.baudrate, 10),
-								debug = debug_mode)
-	else:
-		print "Error: Unknown interface type: '%s'" % options.type
-		exit(1)
-	
-	interface.connect()
-	
-	try:
-		bootloader = CommandlineClient(board_id, interface, debug = debug_mode)
-		bootloader.program(hexfile.segments)
-	except BootloaderException, msg:
-		print "Error: %s" % msg
-	except KeyboardInterrupt, msg:
-		print "Abort!"
-	finally:
-		interface.disconnect()

@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import sys
+import functools
 
 class HexParserException(Exception):
 	""" Ausnahmeklasse fuer den Intel-Hex-Parser """
@@ -70,8 +71,8 @@ class IntelHexParser:
 				raise HexParserException("Invaild Line Length.")
 		
 			# Checksumme ueberpruefen
-			bb = [int(l[i:i+2], 16) for i in xrange(1,len(l),2)]
-			crc = reduce(lambda x, y: x+y, bb, 0)
+			bb = [int(l[i:i+2], 16) for i in range(1, len(l), 2)]
+			crc = functools.reduce(lambda x, y: x+y, bb, 0)
 			crc &= 0x0FF
 
 			if crc != 0:
@@ -130,8 +131,8 @@ if __name__ == '__main__':
 	
 	try:
 		parser = IntelHexParser(filename)
-		print parser
-	except HexParserException, e:
+		print(parser)
+	except HexParserException as e:
 		# Fehlermeldungen ausgeben
-		print e
+		print(e)
 

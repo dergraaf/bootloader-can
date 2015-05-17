@@ -53,7 +53,7 @@ class ProgressBar:
 										' '*(max_char-num_hashes))
 
 		# Prozentanzeige ungefaehr mittig einsetzen.
-		percent_position = (len(self.progbar) / 2) - len(str(percent_done)) 
+		percent_position = int((len(self.progbar) / 2) - len(str(percent_done))) 
 		percent_str     = str(percent_done) + "%"
 		self.progbar = ''.join([self.progbar[0:percent_position], percent_str,
 								self.progbar[percent_position+len(percent_str):]])
@@ -92,5 +92,5 @@ if __name__ == '__main__':
 	for x in range(0,101):
 		time.sleep(0.10)
 		bar(x)
-	print ""
+	print("")
 

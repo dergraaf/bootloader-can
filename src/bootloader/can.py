@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 import threading
-import Queue
+import queue
 
-import uspp.uspp as serial
-import message_dispatcher as dispatcher
+from .uspp import uspp as serial
+from . import message_dispatcher as dispatcher
 
 # ------------------------------------------------------------------------------
 class CanException(Exception):
@@ -61,7 +61,7 @@ class SerialInterface:
 		self.isConnected = False
 		
 		self.__receiverStopEvent = threading.Event()
-		self.__receiveQueue = Queue.Queue()
+		self.__receiveQueue = queue.Queue()
 		
 		self._buf = []
 	
@@ -121,7 +121,7 @@ class SerialInterface:
 		# close serial port
 		try:
 			del self._interface
-		except serial.SerialPortException, e:
+		except serial.SerialPortException as e:
 			raise CanException(e)
 		
 		self.isConnected = False
@@ -129,7 +129,7 @@ class SerialInterface:
 	
 	def _debug(self, text):
 		if self.debugFlag:
-			print text
+			print(text)
 	
 	def _sendRaw(self, data):
 		self._interface.write(data)
@@ -331,7 +331,7 @@ class DebugInterface(SerialInterface, dispatcher.MessageDispatcher):
 		pass
 	
 	def send(self, message):
-		print message
+		print(message)
 	
 	def sendRaw(self, data):
 		pass

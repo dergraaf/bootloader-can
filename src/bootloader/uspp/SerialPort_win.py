@@ -26,12 +26,12 @@
 # Purpose:   Handle low level access to serial port in windows.
 #
 # Author:    Isaac Barona Martinez <ibarona@gmail.com>
-# Copyright: (c) 2001 by Isaac Barona Martínez
+# Copyright: (c) 2001 by Isaac Barona Martï¿½nez
 # Licence:   LGPL
 #
 # Created:   26 June 2001
 # History:
-# 20 January 2002 : Damien Géranton <dgeranton@voila.fr>
+# 20 January 2002 : Damien Gï¿½ranton <dgeranton@voila.fr>
 #  Bug fix for Win2000, the file must not be open with
 #  FILE_FLAG_OVERLAPPED
 #
@@ -49,7 +49,6 @@ SerialPort_win.py - Handle low level access to serial port in windows.
 See also uspp module docstring.
 
 """
-
 
 from win32file import *
 from win32event import *
@@ -243,8 +242,3 @@ class SerialPort:
         """Discards all bytes from the output or input buffer"""
         PurgeComm(self.__handle, PURGE_TXABORT|PURGE_RXABORT|PURGE_TXCLEAR|
                   PURGE_RXCLEAR)
-
-
-
-        
-

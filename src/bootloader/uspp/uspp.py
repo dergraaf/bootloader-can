@@ -186,8 +186,8 @@ __version__="0.1"
 import sys
 
 if sys.platform=='win32':
-    from SerialPort_win import *
-elif sys.platform=='linux2':
-    from SerialPort_linux import *
+    from .SerialPort_win import *
+elif sys.platform=='linux':
+    from .SerialPort_linux import *
 else:
     sys.exit('Sorry, no implemented for this platform yet')

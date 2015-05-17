@@ -26,7 +26,7 @@
 # Purpose:   Handle low level access to serial port in linux.
 #
 # Author:    Isaac Barona Martinez <ibarona@gmail.com>
-# Copyright: (c) 2006 by Isaac Barona Martínez
+# Copyright: (c) 2006 by Isaac Barona Martï¿½nez
 # Licence:   LGPL
 #
 # Created:   26 June 2001
@@ -50,12 +50,11 @@ See also uspp module docstring.
 import os
 from termios import *
 import fcntl
-import exceptions
 import struct
 import array
 
 
-class SerialPortException(exceptions.Exception):
+class SerialPortException(Exception):
     """Exception raise in the SerialPort methods"""
     def __init__(self, args=None):
         self.args=args
@@ -77,7 +76,7 @@ class SerialPort:
         57600: B57600,
         115200: B115200
         }
-    buf = array.array('h', '\000'*4)
+    buf = array.array('h', [0, 0, 0, 0])
 
     def __init__(self, dev, timeout=None, speed=None, mode='232', params=None):
         """Open the serial port named by the string 'dev'
@@ -125,77 +124,78 @@ class SerialPort:
         self.__configure()
 
     def __del__(self):
-		"""Close the serial port and restore its initial configuration
-		
-		To close the serial port we have to do explicity: del s
-		(where s is an instance of SerialPort)
-		"""
-		
-		if self.__handle and self.__oldmode:
-			tcsetattr(self.__handle, TCSANOW, self.__oldmode)
-			self.__oldmode = None
-		
-		try:
-			os.close(self.__handle)
-		except (IOError, AttributeError, TypeError):
-			raise SerialPortException("Unable to close port")
+        """Close the serial port and restore its initial configuration
+        
+        To close the serial port we have to do explicity: del s
+        (where s is an instance of SerialPort)
+        """
+        
+        if self.__handle and self.__oldmode:
+            tcsetattr(self.__handle, TCSANOW, self.__oldmode)
+            self.__oldmode = None
+        
+        try:
+            os.close(self.__handle)
+        except (IOError, AttributeError, TypeError):
+            raise SerialPortException("Unable to close port")
 
 
     def __configure(self):
-		"""Configure the serial port.
+        """Configure the serial port.
 
-		Private method called in the class constructor that configure the 
-		serial port with the characteristics given in the constructor.
-		"""
-		if not self.__speed:
-			self.__speed=9600
+        Private method called in the class constructor that configure the 
+        serial port with the characteristics given in the constructor.
+        """
+        if not self.__speed:
+            self.__speed=9600
 
-		try:
-			# Save the initial port configuration
-			self.__oldmode = tcgetattr(self.__handle)
-			
-			if not self.__params:
-				# self.__params is a list of attributes of the file descriptor
-				# self.__handle as follows:
-				# [c_iflag, c_oflag, c_cflag, c_lflag, c_ispeed, c_ospeed, cc]
-				# where cc is a list of the tty special characters.
-				self.__params=[]
-				# c_iflag
-				self.__params.append(IGNPAR)           
-				# c_oflag
-				self.__params.append(0)                
-				# c_cflag
-				self.__params.append(CS8|CLOCAL|CREAD) 
-				# c_lflag
-				self.__params.append(0)                
-				# c_ispeed
-				self.__params.append(SerialPort.BaudRatesDic[self.__speed]) 
-				# c_ospeed
-				self.__params.append(SerialPort.BaudRatesDic[self.__speed]) 
-				cc=[0]*NCCS
-			if self.__timeout==None:
-				# A reading is only complete when VMIN characters have
-				# been received (blocking reading)
-				cc[VMIN]=1
-				cc[VTIME]=0
-			elif self.__timeout==0:
-				# Non-blocking reading. The reading operation returns
-				# inmeditately, returning the characters waiting to 
-				# be read.
-				cc[VMIN]=0
-				cc[VTIME]=0
-			else:
-				# Time-out reading. For a reading to be correct
-				# a character must be recieved in VTIME*100 seconds.
-				cc[VMIN]=0
-				cc[VTIME]=self.__timeout/100
-				self.__params.append(cc)               # c_cc
-
-			tcsetattr(self.__handle, TCSANOW, self.__params)
-		
-		except error, e:
-			self.__handle = None
-			raise SerialPortException(e)
+        try:
+            # Save the initial port configuration
+            self.__oldmode = tcgetattr(self.__handle)
+            
+            if not self.__params:
+                # self.__params is a list of attributes of the file descriptor
+                # self.__handle as follows:
+                # [c_iflag, c_oflag, c_cflag, c_lflag, c_ispeed, c_ospeed, cc]
+                # where cc is a list of the tty special characters.
+                self.__params=[]
+                # c_iflag
+                self.__params.append(IGNPAR)           
+                # c_oflag
+                self.__params.append(0)                
+                # c_cflag
+                self.__params.append(CS8|CLOCAL|CREAD) 
+                # c_lflag
+                self.__params.append(0)                
+                # c_ispeed
+                self.__params.append(SerialPort.BaudRatesDic[self.__speed]) 
+                # c_ospeed
+                self.__params.append(SerialPort.BaudRatesDic[self.__speed]) 
+                cc=[0]*NCCS
+            
+            if self.__timeout==None:
+                # A reading is only complete when VMIN characters have
+                # been received (blocking reading)
+                cc[VMIN]=1
+                cc[VTIME]=0
+            elif self.__timeout==0:
+                # Non-blocking reading. The reading operation returns
+                # inmeditately, returning the characters waiting to 
+                # be read.
+                cc[VMIN]=0
+                cc[VTIME]=0
+            else:
+                # Time-out reading. For a reading to be correct
+                # a character must be recieved in VTIME*100 seconds.
+                cc[VMIN]=0
+                cc[VTIME]=int(self.__timeout/100)
+                self.__params.append(cc)               # c_cc
+            
+            tcsetattr(self.__handle, TCSANOW, self.__params)
+        
+        except error as e:
+            self.__handle = None
+            raise SerialPortException(e)
 
 
     def fileno(self):
@@ -226,36 +226,29 @@ class SerialPort:
         Uses the private method __read1 to read num bytes. If an exception
         is generated in any of the calls to __read1 the exception is reraised.
         """
-        s=''
+        s = ''
         for i in range(num):
-            s=s+SerialPort.__read1(self)
-        
+            s = s + SerialPort.__read1(self).decode('UTF-8')
         return s
-
 
     def readline(self):
         """Read a line from the serial port.  Returns input once a '\n'
         character is found.
         Douglas Jones (dfj23@drexel.edu) 09/09/2005.
         """
-
         s = ''
         while not '\n' in s:
-            s = s+SerialPort.__read1(self)
-
+            s = s + SerialPort.__read1(self).decode('UTF-8')
         return s 
-
         
     def write(self, s):
         """Write the string s to the serial port"""
-
-        os.write(self.__handle, s)
-
+        os.write(self.__handle, bytes(s, 'UTF-8'))
         
     def inWaiting(self):
         """Returns the number of bytes waiting to be read"""
         data = struct.pack("L", 0)
-        data=fcntl.ioctl(self.__handle, TIOCINQ, data)
+        data = fcntl.ioctl(self.__handle, TIOCINQ, data)
         return struct.unpack("L", data)[0]
 
     def outWaiting(self):
@@ -263,14 +256,14 @@ class SerialPort:
         mod. by J.Grauheding
         result needs some finetunning
         """
-        rbuf=fcntl.ioctl(self.__handle, TIOCOUTQ, self.buf)
+        rbuf = fcntl.ioctl(self.__handle, TIOCOUTQ, self.buf)
         return rbuf
 
     def getlsr(self):
         """Returns the status of the UART LSR Register
         J.Grauheding
         """
-        rbuf=fcntl.ioctl(self.__handle, TIOCSERGETLSR, self.buf)
+        rbuf = fcntl.ioctl(self.__handle, TIOCSERGETLSR, self.buf)
         return ord(rbuf[0])
 
     def get_temt(self):
@@ -278,7 +271,7 @@ class SerialPort:
         J.Grauheding
         test result against TIOCSER_TEMT
         """
-        rbuf=fcntl.ioctl(self.__handle, TIOCSERGETLSR, self.buf)
+        rbuf = fcntl.ioctl(self.__handle, TIOCSERGETLSR, self.buf)
         return ord(rbuf[0]) & TIOSER_TEMT
 
 
@@ -333,6 +326,3 @@ class SerialPort:
         """ J.Grauheding """
         rbuf = fcntl.ioctl(self.__handle, TIOCMGET, self.buf)
         return ord(rbuf[3]) & TIOCM_RNG
-
-        
-
