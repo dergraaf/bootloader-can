@@ -1,54 +1,20 @@
-// coding: utf-8
-// ----------------------------------------------------------------------------
-/* Copyright (c) 2010, Roboterclub Aachen e.V.
+/* Copyright (c) 2010, Fabian Greif
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- *  * Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *  * Neither the name of the Roboterclub Aachen e.V. nor the
- *    names of its contributors may be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY ROBOTERCLUB AACHEN E.V. ''AS IS'' AND ANY
- * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL ROBOTERCLUB AACHEN E.V. BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $Id$
+ * The file is part of the CAN bootloader project and is released under the
+ * 3-clause BSD license. See the file `LICENSE` for the full license governing
+ * this code.
  */
 // ----------------------------------------------------------------------------
 
 #ifndef AT90CAN_H
 #define AT90CAN_H
 
-// ----------------------------------------------------------------------------
-/**
- * \ingroup		communication
- * \defgroup 	can_interface Universelles CAN Interface
- * \brief		allgemeines CAN Interface für AT90CAN32/64/128, MCP2515 und SJA1000
- *
- * \author 		Fabian Greif <fabian.greif@rwth-aachen.de>
- * \version		$Id$
- */
-// ----------------------------------------------------------------------------
-
-#include <avr/pgmspace.h>
 #include <stdint.h>
 #include <stdbool.h>
 
-// ----------------------------------------------------------------------------
+#include <avr/pgmspace.h>
+
 extern volatile uint8_t at90can_messages_waiting;
 extern volatile uint8_t at90can_free_buffer;
 
@@ -80,9 +46,7 @@ typedef enum
 #define	COMMAND_MASK			0x3F
 #define	START_OF_MESSAGE_MASK	0x80
 
-// ----------------------------------------------------------------------------
 /**
- * 
  * The lower eight MObs are used for receiption, the upper seven for
  * transmission. This separation simplifies the access to the registers 
  * and leads to smaller code size.
@@ -90,9 +54,8 @@ typedef enum
 void
 at90can_init(void);
 
-// ----------------------------------------------------------------------------
 /**
- * \brief	Send a message
+ * Send a message.
  * 
  * If all seven send buffers are used this method waits until one gets free.
  * 
@@ -101,9 +64,8 @@ at90can_init(void);
 void
 at90can_send_message(command_t type, uint8_t length);
 
-// ----------------------------------------------------------------------------
 /**
- * \brief	Receive new messages
+ * Receive new messages.
  * 
  * \return	Type of the message, NO_MESSAGE if no or an invalid message was
  * 			received.
