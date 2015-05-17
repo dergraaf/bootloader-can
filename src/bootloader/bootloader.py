@@ -73,8 +73,8 @@ class MessageType:
 	ERROR			= 2
 	WRONG_NUMBER	= 3
 	
-	def __init__(self, type):
-		self.type = type
+	def __init__(self, messageType):
+		self.type = messageType
 	
 	def __str__(self):
 		return { 0: "request",
@@ -93,7 +93,7 @@ class Message:
 	# --------------------------------------------------------------------------
 	def __init__(	self, 
 					board_id = None,
-					type = MessageType.REQUEST,
+					messageType = MessageType.REQUEST,
 					subject = None,
 					number = 0,
 					data_counter = 0,
@@ -101,7 +101,7 @@ class Message:
 		
 		# set default values
 		self.board_id = board_id
-		self.type = type
+		self.type = messageType
 		self.subject = subject
 		self.number = number
 		self.data_counter = data_counter
@@ -146,8 +146,8 @@ class ProgrammeableBoard:
 	"""Container class which holds information about an active board"""
 	
 	# --------------------------------------------------------------------------
-	def __init__(self, id):
-		self.id = id
+	def __init__(self, identifier):
+		self.id = identifier
 		self.connected = False
 		
 		# information about the board we are currently programming
@@ -382,7 +382,7 @@ class Bootloader:
 		in case of a reported error."""
 		
 		message = Message(board_id = self.board.id,
-						  type = MessageType.REQUEST,
+						  messageType = MessageType.REQUEST,
 						  subject = subject,
 						  number = self.msg_number,
 						  data_counter = counter,
@@ -429,7 +429,8 @@ class Bootloader:
 
 							break;
 						elif response_msg.type == MessageType.WRONG_NUMBER:
-							print("Warning: Wrong message number detected (board says %x, I have %x)" % (response_msg.number, message.number))
+							print("Warning: Wrong message number detected (board: %x, here: %x)" %
+									(response_msg.number, message.number))
 							
 							# reset message number only if we just started the communication
 							if message.number == 0:
@@ -448,13 +449,16 @@ class Bootloader:
 							#addressAlreadySet = False
 							break;
 						else:
-							raise BootloaderException("Failure %i while sending '%s'" % (response_msg.type, message))
+							raise BootloaderException("Failure %i while sending '%s'" %
+														(response_msg.type, message))
 					else:
-						self.debug("Warning: Discarding obviously old message (received %i/%x, I have %i/%x)" % (response_msg.subject, response_msg.number, message.subject, message.number))
+						self.debug("Warning: Discarding obviously old message (received %i/%x, here: %i/%x)" %
+									(response_msg.subject, response_msg.number, message.subject, message.number))
 			
 			repeats += 1
 			if attempts > 0 and repeats >= attempts:
-				raise BootloaderException("No response after %i attempts and timeout %i while sending '%s'" % (repeats, timeout, message))
+				raise BootloaderException("No response after %i attempts and timeout %i while sending '%s'" %
+											(repeats, timeout, message))
 		
 		# increment the message number
 		self.msg_number = (self.msg_number + 1) & 0xff

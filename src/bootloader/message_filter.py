@@ -45,10 +45,10 @@ class AttributeFilter(BaseFilter):
 class CanFilter(BaseFilter):
 	"""A Filter specifically suited for CAN messages
 	"""
-	def __init__(self, callback, id = 0, extended = True, rtr = False):
+	def __init__(self, callback, identifier = 0, extended = True, rtr = False):
 		BaseFilter.__init__(self, callback)
 		
-		self.id = id
+		self.id = identifier
 		self.extended = extended
 		self.rtr = rtr
 	
@@ -77,10 +77,10 @@ if __name__ == '__main__':
 	
 	times = 100000
 	start = time.time()
-	for i in xrange(times):
+	for i in range(times):
 		filter1.check(msg)
 	mid = time.time()
-	for i in xrange(times):
+	for i in range(times):
 		filter2.check(msg)
 	end = time.time()
 	
