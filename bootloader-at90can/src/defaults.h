@@ -81,7 +81,7 @@
 
 // -----------------------------------------------------------------------------
 // set current version of the bootloader
-#define	BOOTLOADER_VERSION		2
+#define	BOOTLOADER_VERSION		3
 
 // -----------------------------------------------------------------------------
 // CAN settings

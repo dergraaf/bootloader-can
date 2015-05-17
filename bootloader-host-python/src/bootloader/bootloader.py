@@ -50,9 +50,10 @@ class MessageSubject:
 	DATA			= 3
 	START_APPLICATION = 4
 	
-	# only avilable in the "bigger" versions
-	GET_FUSEBITS	= 5
-	CHIP_ERASE		= 6
+	# only avilable in the extended versions
+	READ_FLASH      = 5
+	GET_FUSEBITS	= 6
+	CHIP_ERASE		= 7
 	
 	def __init__(self, subject):
 		self.subject = subject
@@ -62,8 +63,9 @@ class MessageSubject:
 				 2: "set_address",
 				 3: "data",
 				 4: "start_app",
-				 5: "get_fusebit",
-				 6: "chip_erase"}[self.subject]
+				 5: "read_flash",
+				 6: "get_fusebit",
+				 7: "chip_erase"}[self.subject]
 
 
 # -----------------------------------------------------------------------------
@@ -303,6 +305,31 @@ class Bootloader:
 		#self._send( MessageSubject.WRITE_PAGE, [page / 0xff, page % 0xff] )
 	
 	# --------------------------------------------------------------------------
+	def verify_page(self, page, data):
+		"""Verify a page of the flash memory
+		"""
+		data = [ord(x) for x in data]
+		
+		# amend the data field to a complete page
+		size = len(data)
+		if size < self.board.pagesize:
+			data += [0xff] * (self.board.pagesize - size)
+		
+		remaining = self.board.pagesize / 4
+		offset = 0
+		
+		while remaining > 0:
+			block = data[offset*4:offset*4 + 4]
+			answer = self._send(subject=MessageSubject.READ_FLASH,
+								data=[page >> 8, page & 0xff, 0, offset])
+			
+			if block != answer.data:
+				raise BootloaderException("Could not write page %i!" % page)
+			
+			remaining -= 1
+			offset += 1
+	
+	# --------------------------------------------------------------------------
 	def start_app(self):
 		"""Start the written application"""
 		self._send( MessageSubject.START_APPLICATION )
@@ -312,11 +339,11 @@ class Bootloader:
 		"""Program the AVR
 		
 		First the function waits for a connection then it will send the
-		data page by page. Finally the written application will be started.
+		data page by page.
 		"""
 		self._report_progress(self.WAITING)
 		
-		print("connecting ... ",)
+		print("connecting ... ", end="", flush=True)
 		
 		# try to connect to the bootloader
 		self.identify()
@@ -331,6 +358,7 @@ class Bootloader:
 		pages = int(math.ceil(float(totalsize) / float(pagesize)))
 		
 		print("write %i pages\n" % pages)
+		print("Program:")
 		
 		if pages > self.board.pages:
 			raise BootloaderException("Programsize exceeds available Flash!")
@@ -358,19 +386,68 @@ class Bootloader:
 		self._report_progress(self.END)
 		
 		endtime = time.time()
-		print("%.2f seconds\n" % (endtime - starttime))
-		
-		# start the new application
-		self.start_app()
+		totaltime = endtime - starttime
+		transferrate = int(totalsize / totaltime)
+		print("%.2f seconds (%i Byte/s)\n" % (totaltime, transferrate))
 	
 	# --------------------------------------------------------------------------
-	def _send(	self,
-				subject,
-				data = [],
-				counter = Message.START_OF_MESSAGE_MASK | 0,
-				response = True,
-				timeout = 0.5,
-				attempts = 2):
+	def verify(self, segments):
+		"""Verify the program on the AVR
+		
+		First the function waits for a connection then it will send the
+		data page by page. Finally the written application will be started.
+		"""
+		self._report_progress(self.WAITING)
+		
+		# try to connect to the bootloader
+		self.identify()
+		
+		totalsize = functools.reduce(lambda x,y: x + y, map(lambda x: len(x), segments))
+		segment_number = 0
+		
+		pagesize = self.board.pagesize
+		pages = int(math.ceil(float(totalsize) / float(pagesize)))
+		
+		if self.board.bootloader_type == 0:
+			raise BootloaderException("Verify requires an extended Bootloader. Aborting!")
+		
+		if pages > self.board.pages:
+			raise BootloaderException("Programsize exceeds available Flash!")
+		
+		print("Verify:")
+		
+		# start progressbar
+		self._report_progress(self.START)
+		starttime = time.time()
+		offset = 0
+		
+		for i in range(pages):
+			data = segments[segment_number]
+			self.verify_page(page = i,
+							 data = data[offset:offset+pagesize])
+			offset += pagesize
+			if offset >= len(data):
+				offset = 0
+				segment_number += 1
+				self.debug("Now starting segment %i" % segment_number)
+			self._report_progress(self.IN_PROGRESS, float(i) / float(pages))
+		
+		# show a 100% progressbar
+		self._report_progress(self.END)
+		
+		endtime = time.time()
+		totaltime = endtime - starttime
+		transferrate = int(totalsize / totaltime)
+		print("%.2f seconds (%i Byte/s)\n" % (totaltime, transferrate))
+	
+	# --------------------------------------------------------------------------
+	def _send(self,
+			  subject,
+			  data = [],
+			  counter = Message.START_OF_MESSAGE_MASK | 0,
+			  response = True,
+			  timeout = 0.5,
+			  attempts = 2):
 		
 		"""Send a message via CAN Bus
 		

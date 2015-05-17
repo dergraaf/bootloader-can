@@ -137,6 +137,9 @@ CFLAGS += -funsigned-char
 CFLAGS += -funsigned-bitfields
 CFLAGS += -fpack-struct
 CFLAGS += -fshort-enums
+# Bootloaders must not use table jumps!
+# see for example http://www.avrfreaks.net/forum/avr-gcc-jump-table-bug
+CFLAGS += -fno-jump-tables
 CFLAGS += -Wall
 CFLAGS += -Wstrict-prototypes
 #CFLAGS += -Wno-strict-aliasing

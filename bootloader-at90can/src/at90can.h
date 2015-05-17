@@ -32,12 +32,12 @@ typedef enum
 	START_APP		= 4,
 	
 	// only avilable in the "bigger" versions
-	GET_FUSEBITS	= 5,
-	CHIP_ERASE		= 6,
+	READ_FLASH		= 5,
+	GET_FUSEBITS	= 6,
+	CHIP_ERASE		= 7,
 	
-	READ_EEPROM		= 7,
-	WRITE_EEPROM	= 8,
-	READ_FLASH		= 9,
+	READ_EEPROM		= 8,
+	WRITE_EEPROM	= 9,
 
 	REQUEST					= 0x00,
 	SUCCESSFULL_RESPONSE	= 0x40,

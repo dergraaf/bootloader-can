@@ -99,7 +99,7 @@ static void
 boot_program_page(uint16_t page, uint8_t *buf)
 {
 	uint32_t address = page * SPM_PAGESIZE;
-	
+
 	boot_page_erase(address);
 	boot_spm_busy_wait();		// Wait until the memory is erased.
 	
@@ -307,13 +307,34 @@ main(void)
 		}
 
 #if BOOTLOADER_TYPE > 0
+		// Read four bytes from the flash memory
+		case READ_FLASH:
+		{
+			uint16_t page = (message_data[0] << 8) | message_data[1];
+			uint16_t bufferpos = (message_data[2] << 8) | message_data[3];
+
+			if ((message_data_length == 4)
+				&& (page < RWW_PAGES)
+				&& (bufferpos < (SPM_PAGESIZE / 4)))
+			{
+				uint16_t address = page * SPM_PAGESIZE + bufferpos * 4;
+				memcpy_P(&message_data[0], (const void *) address, 4);
+
+				at90can_send_message(READ_FLASH | SUCCESSFULL_RESPONSE, 4);
+			}
+			else
+			{
+				goto error_response;
+			}
+			break;
+		}
 		case GET_FUSEBITS:
 		{
 			message_data[0] = boot_lock_fuse_bits_get(GET_LOCK_BITS);
 			message_data[1] = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
 			message_data[2] = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
 			message_data[3] = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
-			
+
 			at90can_send_message(GET_FUSEBITS | SUCCESSFULL_RESPONSE, 4);
 			break;
 		}
@@ -323,12 +344,12 @@ main(void)
 			for (uint16_t page = 0; page < RWW_PAGES; ++page)
 			{
 				uint32_t address = page * SPM_PAGESIZE;
-				
+
 				boot_page_erase(address);
 				boot_spm_busy_wait();
 			}
 			boot_rww_enable();
-			
+
 			at90can_send_message(CHIP_ERASE | SUCCESSFULL_RESPONSE, 0);
 			break;
 		}
@@ -368,49 +389,6 @@ main(void)
 			}
 			break;
 		}
-//		// Lese 1..65556 Byte aus dem Flash. Bei mehr als 6 Zeichen
-//		// wird das Ergebniss auf mehrere Nachrichten verteilt.
-//		case READ_FLASH:
-//			if (message_length == 6)
-//			{
-//				uint16_t flash_ptr = (MESSAGE_DATA[2] << 8) | MESSAGE_DATA[3];
-//
-//				if (flash_ptr <= FLASHEND)
-//				{
-//					uint16_t number = (MESSAGE_DATA[4] << 8) | MESSAGE_DATA[5];
-//
-//					// Anzahl der zu senden Nachrichten bestimmen
-//					div_t r = div(number, 6);
-//					number = r.quot;
-//					if (r.rem > 0)
-//						number += 1;
-//
-//					uint16_t counter = 0;
-//					for (uint16_t i=0;i<number;i++)
-//					{
-//						if (i == r.quot)
-//							// das letze Paket ist eventl. kuerzer
-//							message_length = r.rem;
-//						else
-//							message_length = 6;
-//
-//						// FIXME
-//						//memcpy_P( MESSAGE_DATA + 2, (PGM_VOID_P) flash_ptr, message_length );
-//						flash_ptr += message_length;
-//
-//						MESSAGE_DATA[1] = counter;
-//						counter = (counter + 1) & 0x3f;
-//
-//						// Nachricht verschicken
-//						at90can_send_message(0);
-//					}
-//
-//					response = ACK;
-//					break;
-//				}
-//			}
-//			response = NACK;
-//			break;
 #endif
 		
 		error_response:

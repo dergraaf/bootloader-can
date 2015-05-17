@@ -25,6 +25,8 @@ parser.add_argument("-i", "--id", dest="id", help="id of the board to program")
 parser.add_argument("-e", "--erase", action="count", help="erase Chip befor programming")
 parser.add_argument("-a", "--application", action="count", dest="start_app", 
         help="start Application (only evaluated if FILE is not specified)")
+parser.add_argument("-v", "--verify", dest="verify", default=False, action='store_true',
+        help="Verify the content after programming (requires an extended bootlaoder)")
 parser.add_argument("-c", "--config", action="count", 
         help="prints the configuration of the bootloader")
 parser.add_argument("-d", "--debug", action="count",
@@ -75,6 +77,9 @@ interface.connect()
 try:
     client = bootloader.bootloader.CommandlineClient(board_id, interface, debug = debug_mode)
     client.program(hexfile.segments)
+    if args.verify:
+        client.verify(hexfile.segments)
+    client.start_app()
 except bootloader.bootloader.BootloaderException as msg:
     print("Error: %s" % msg)
 except KeyboardInterrupt as msg:
