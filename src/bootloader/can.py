@@ -14,8 +14,8 @@ class CanException(Exception):
 class Message:
 	"""Class representation of a CAN message"""
 	
-	def __init__(self, id, data=[], extended=True, rtr=False, timestamp=None):
-		self.id = id
+	def __init__(self, identifier, data=[], extended=True, rtr=False, timestamp=None):
+		self.id = identifier
 		self.extended = extended
 		self.rtr = rtr
 		self.data = data
@@ -134,7 +134,7 @@ class SerialInterface:
 	def _sendRaw(self, data):
 		self._interface.write(data)
 	
-	def _decode(self, chr):
+	def _decode(self, byte):
 		"""Collects and decodes messages"""
 		pass
 	
@@ -175,9 +175,9 @@ class Usb2Can(SerialInterface, dispatcher.MessageDispatcher):
 		#self._sendRaw("S6\r")
 		self._sendRaw("O\r")
 	
-	def _decode(self, chr):
-		if chr != '\r':
-			self._buf.append(chr)
+	def _decode(self, byte):
+		if byte != '\r':
+			self._buf.append(byte)
 			return None
 		else:
 			data = ''.join(self._buf)
@@ -186,8 +186,8 @@ class Usb2Can(SerialInterface, dispatcher.MessageDispatcher):
 			if not data:
 				return None
 			
-			type = data[0]
-			if type == 'T':
+			messageType = data[0]
+			if messageType == 'T':
 				# extended frame
 				data2 = data[10:]
 				message_data = []
@@ -197,7 +197,7 @@ class Usb2Can(SerialInterface, dispatcher.MessageDispatcher):
 				
 				message = Message( int(data[1:9], 16), message_data, extended = True, rtr = False )
 			
-			elif type == 't':
+			elif messageType == 't':
 				data2 = data[5:]
 				message_data = []
 				for x in range(0, len(data2), 2):
@@ -205,10 +205,10 @@ class Usb2Can(SerialInterface, dispatcher.MessageDispatcher):
 				
 				message = Message( int(data[1:4], 16), message_data, extended = False, rtr = False )
 			
-			elif type == 'R':
+			elif messageType == 'R':
 				message = Message( int(data[1:9], 16), [None] * int(data[9]), extended = True, rtr = True )
 			
-			elif type == 'r':
+			elif messageType == 'r':
 				message = Message( int(data[1:4], 16), [None] * int(data[4]), extended = False, rtr = True )
 			
 			else:
@@ -262,17 +262,17 @@ class CanDebugger(SerialInterface, dispatcher.MessageDispatcher):
 		self._sendRaw("set filter 2 0 0\r")
 		self._sendRaw("set filter 3 0 0\r")
 	
-	def _decode(self, chr):
-		if chr != '\n':
-			self._buf.append(chr)
+	def _decode(self, byte):
+		if byte != '\n':
+			self._buf.append(byte)
 		else:
 			result = self.regularExpression.match(''.join(self._buf))
 			self._buf = []
 			
 			if result:
-				dict = result.groupdict()
+				message = result.groupdict()
 				
-				data = dict['data']
+				data = message['data']
 				if data:
 					msg_data = []
 					while data:
@@ -280,16 +280,16 @@ class CanDebugger(SerialInterface, dispatcher.MessageDispatcher):
 						data = data[3:]
 					rtr = False
 				else:
-					msg_data = [None] * int(dict['len'])
+					msg_data = [None] * int(message['len'])
 					rtr = True
 				
-				id = int(dict['id'], 16)
-				extended = True if len(dict['id']) > 3 else False
+				identifier = int(message['id'], 16)
+				extended = True if len(message['id']) > 3 else False
 				
-				timestamp = int(dict['timestamp'], 10)
+				timestamp = int(message['timestamp'], 10)
 				
 				# create message
-				message = Message(id, msg_data, extended = extended, rtr = rtr, timestamp = timestamp)
+				message = Message(identifier, msg_data, extended = extended, rtr = rtr, timestamp = timestamp)
 				
 				self._debug("> " + str(message))
 				

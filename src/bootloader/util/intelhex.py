@@ -62,10 +62,10 @@ class IntelHexParser:
 			if l[0] != ':' or len(l) < 11: 
 				raise HexParserException("File Format Error.")
 			
-			length 	= int(l[1:3], 16)
-			address	= int(l[3:7], 16)
-			type 	= int(l[7:9], 16)
-			check 	= int(l[-2:], 16)
+			length 	 = int(l[1:3], 16)
+			address	 = int(l[3:7], 16)
+			linetype = int(l[7:9], 16)
+			#checksum = int(l[-2:], 16)
 
 			if len(l) != (11 + 2*length):
 				raise HexParserException("Invaild Line Length.")
@@ -78,7 +78,7 @@ class IntelHexParser:
 			if crc != 0:
 				raise HexParserException("Checksum Error.")
 			
-			if type == 0x00:
+			if linetype == 0x00:
 				if currentAddr != address:
 					if segmentdata:
 						self.segments.append( Segment(startAddr, ''.join(segmentdata)) )
@@ -87,16 +87,16 @@ class IntelHexParser:
 				for i in range(length):
 					segmentdata.append( chr(int(l[9+2*i:11+2*i],16)) )
 				currentAddr = length + currentAddr
-			elif type == 0x01:
+			elif linetype == 0x01:
 				# Ende der Hexdaten
 				if length == 0:
 					break
 				else:
 					raise HexParserException("Invalid End-of-File Record")
-			elif type in (0x02, 0x03, 0x04):
+			elif linetype in (0x02, 0x03, 0x04):
 				pass
 			else:
-				sys.stderr.write("Ignored unknown field (type 0x%02x) in ihex file.\n" % type)
+				sys.stderr.write("Ignored unknown field (type 0x%02x) in ihex file.\n" % linetype)
 		
 		if segmentdata:
 			self.segments.append( Segment(startAddr, ''.join(segmentdata)) )

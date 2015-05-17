@@ -9,7 +9,6 @@ rootpath = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "src"
 sys.path.append(rootpath)
 
 import bootloader
-import bootloader.util
 
 parser = argparse.ArgumentParser(
         usage   = "%(prog)s [options] -i BOARD_ID -f FILE")

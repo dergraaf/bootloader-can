@@ -24,7 +24,6 @@ import functools
 from . import can
 from . import message_filter as filter
 
-from .util import intelhex
 from .util import progressbar
 
 version = "1.5"
@@ -135,11 +134,11 @@ class Message:
 	
 	# --------------------------------------------------------------------------
 	def __str__(self):
-		str = "%s.%s id 0x%x [%x] %i >" % (MessageSubject(self.subject).__str__().upper(), MessageType(self.type), self.board_id, self.number, self.data_counter)
+		s = "%s.%s id 0x%x [%x] %i >" % (MessageSubject(self.subject).__str__().upper(), MessageType(self.type), self.board_id, self.number, self.data_counter)
 		for data in self.data:
-			str += " %02x" % data
+			s += " %02x" % data
 		
-		return str
+		return s
 
 
 # -----------------------------------------------------------------------------
@@ -159,10 +158,10 @@ class ProgrammeableBoard:
 	
 	# --------------------------------------------------------------------------
 	def __str__(self):
-		str = "board id 0x%x" % self.id
+		s = "board id 0x%x" % self.id
 		if self.connected:
-			str += " (T%i) v%1.1f, %i pages [%i Byte]" % (self.bootloader_type, self.version, self.pages, self.pagesize)
-		return str		
+			s += " (T%i) v%1.1f, %i pages [%i Byte]" % (self.bootloader_type, self.version, self.pages, self.pagesize)
+		return s		
 
 
 # ------------------------------------------------------------------------------
@@ -181,9 +180,9 @@ class Bootloader:
 		self.board = ProgrammeableBoard(board_id)
 		
 		# connect to the message dispatcher
-		filter = BootloaderFilter(self._get_message)
+		bootfilter = BootloaderFilter(self._get_message)
 		self.interface = interface
-		self.interface.addFilter(filter)
+		self.interface.addFilter(bootfilter)
 		
 		self.debugmode = debug
 		
@@ -445,7 +444,8 @@ class Bootloader:
 								except queue.Empty:
 									break
 							# TODO reset command stack?
-							addressAlreadySet = False    # target might have cycled power, so send address for next block
+							# target might have cycled power, so send address for next block
+							#addressAlreadySet = False
 							break;
 						else:
 							raise BootloaderException("Failure %i while sending '%s'" % (response_msg.type, message))
@@ -504,9 +504,9 @@ class CommandlineClient(Bootloader):
 		# send a rccp reset command
 		dest = self.board.id
 		source = 0xff
-		id = "0x18%02x%02x%02x" % (dest, source, 0x01)
+		identifier = "0x18%02x%02x%02x" % (dest, source, 0x01)
 		
-		msg = can.Message(int(id, 16), extended = True, rtr = False)
+		msg = can.Message(int(identifier, 16), extended = True, rtr = False)
 		self.interface.send(msg)
 	
 	# --------------------------------------------------------------------------
