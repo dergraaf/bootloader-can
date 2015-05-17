@@ -245,35 +245,35 @@ class Bootloader:
 			try:
 				if not addressAlreadySet:
 					# set address in the page buffer
-					self._send( MessageSubject.SET_ADDRESS, [page >> 8, page & 0xff, 0, offset] )
+					self._send( subject=MessageSubject.SET_ADDRESS, data=[page >> 8, page & 0xff, 0, offset] )
 				
 				if remaining < blocksize:
 					blocksize = remaining
 				
 				if blocksize == 1:
-					answer = self._send( MessageSubject.DATA, data[offset*4:offset*4 + 4] )
+					answer = self._send( subject=MessageSubject.DATA, data=data[offset*4:offset*4 + 4] )
 				else:
 					i = offset
 					
 					# start of a new block
-					self._send( MessageSubject.DATA,
-								response = False,
-								counter = Message.START_OF_MESSAGE_MASK | (blocksize - 1),
-								data = data[i * 4: i * 4 + 4])
+					self._send( subject=MessageSubject.DATA,
+								response=False,
+								counter=Message.START_OF_MESSAGE_MASK | (blocksize - 1),
+								data=data[i * 4: i * 4 + 4])
 					
 					for k in range(blocksize - 2, 0 , -1):
 						i += 1
-						self._send( MessageSubject.DATA,
-									response = False,
-									counter = k,
-									data = data[i*4:i*4 + 4] )
+						self._send( subject=MessageSubject.DATA,
+									response=False,
+									counter=k,
+									data=data[i*4:i*4 + 4] )
 					
 					# wait for the response for the last message of this block
 					i += 1
-					answer = self._send( MessageSubject.DATA,
-								response = True,
-								counter = 0,
-								data = data[i * 4: i * 4 + 4])
+					answer = self._send( subject=MessageSubject.DATA,
+								response=True,
+								counter=0,
+								data=data[i * 4: i * 4 + 4])
 				
 				remaining -= blocksize
 				offset += blocksize
@@ -437,7 +437,7 @@ class Bootloader:
 								self.msg_number = response_msg.number
 								message.number = self.msg_number
 							
-							# wait a bit for other error message
+							# wait a bit for other error messages
 							time.sleep(0.1)
 							while True:
 								try:
@@ -447,7 +447,7 @@ class Bootloader:
 							# TODO reset command stack?
 							# target might have cycled power, so send address for next block
 							#addressAlreadySet = False
-							break;
+							break
 						else:
 							raise BootloaderException("Failure %i while sending '%s'" %
 														(response_msg.type, message))

@@ -10,7 +10,7 @@
 #ifndef	DEFAULTS_H
 #define	DEFAULTS_H
 
-#include "../src/config.h"
+#include "config.h"
 
 // ----------------------------------------------------------------------------
 // create pagesize identifier
@@ -29,6 +29,23 @@
 // -----------------------------------------------------------------------------
 // check defines for the bootloader led
 #ifdef BOOT_LED
+
+#define	RESET(x)			RESET2(x)
+#define	SET(x)				SET2(x)
+#define	TOGGLE(x)			TOGGLE2(x)
+#define	SET_OUTPUT(x)		SET_OUTPUT2(x)
+
+#define	RESET2(x,y)			PORT(x) &= ~(1<<y)
+#define	SET2(x,y)			PORT(x) |= (1<<y)
+#define	TOGGLE2(x,y)		PORT(x) ^= (1<<y)
+#define	SET_OUTPUT2(x,y)	DDR(x) |= (1<<y)
+
+#define	PORT(x)				_port2(x)
+#define	DDR(x)				_ddr2(x)
+
+#define	_port2(x)			PORT ## x
+#define	_ddr2(x)			DDR ## x
+
 	#ifndef	BOOT_LED_SET_OUTPUT	
 		#define	BOOT_LED_SET_OUTPUT		SET_OUTPUT(BOOT_LED)
 	#endif
@@ -41,7 +58,7 @@
 		#define	BOOT_LED_OFF			RESET(BOOT_LED)
 	#endif
 	
-	#ifndef	BOOT_LED_TOGGLE	
+	#ifndef	BOOT_LED_TOGGLE
 		#define	BOOT_LED_TOGGLE			TOGGLE(BOOT_LED)
 	#endif
 #else
@@ -81,7 +98,6 @@
 //	#define	RAMSTART	0x0100
 	#define	SIG_FAMILY	0x95
 	#define	SIG_DEVICE	0x81
-	#define	TIMER_INTERRUPT_FLAG_REGISTER	TIFR1
 	
 #elif defined(__AVR_AT90CAN64__)
 	
@@ -89,7 +105,6 @@
 //	#define	RAMSTART	0x0100
 	#define	SIG_FAMILY	0x96
 	#define	SIG_DEVICE	0x81
-	#define	TIMER_INTERRUPT_FLAG_REGISTER	TIFR1
 	
 #elif defined(__AVR_AT90CAN128__)
 	
@@ -97,7 +112,6 @@
 //	#define	RAMSTART	0x0100
 	#define	SIG_FAMILY	0x97
 	#define	SIG_DEVICE	0x81
-	#define	TIMER_INTERRUPT_FLAG_REGISTER	TIFR1
 	
 #else
 	#error	chosen AVR command is not supported yet!

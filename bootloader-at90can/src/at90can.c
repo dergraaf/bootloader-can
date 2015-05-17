@@ -155,16 +155,19 @@ ISR(CANIT_vect)
 			
 			at90can_free_buffer++;
 		}
-		else {
+		else
+		{
 			// a message was received successfully
 			at90can_messages_waiting++;
 		}
 		
 		// reset interrupt
-		if (mob < 8) {
+		if (mob < 8)
+		{
 			CANIE2 &= ~(1 << mob);
 		}
-		else {
+		else
+		{
 			CANIE1 &= ~(1 << (mob - 8));
 		}
 		

@@ -18,7 +18,8 @@ at90can_send_message(command_t type, uint8_t length)
 	while (true)
 	{
 		// check if there is any free MOb
-		if (at90can_free_buffer == 0) {
+		if (at90can_free_buffer == 0)
+		{
 			continue;
 		}
 		
@@ -46,14 +47,16 @@ at90can_send_message(command_t type, uint8_t length)
 				
 				// copy data
 				const uint8_t *p = message_data;
-				for (uint8_t i = 0; i < length; i++) {
+				for (uint8_t i = 0; i < length; i++)
+				{
 					CANMSG = *p++;
 				}
 				
 				// enable MOb interrupt
 				CANIE1 |= (1 << (mob - 8));
 				
-				ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+				ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+				{
 					at90can_free_buffer--;
 				}
 				

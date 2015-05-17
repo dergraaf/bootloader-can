@@ -15,6 +15,10 @@
  * \author	Adrian Weiler
  */
 
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <avr/io.h>
 #include <avr/wdt.h>
 #include <avr/boot.h>
@@ -22,33 +26,26 @@
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <util/delay.h>
 
 #include "at90can.h"
 #include "defaults.h"
-#include "utils.h"
 
-#define	MESSAGE_NUMBER			message_number
-#define	MESSAGE_DATA_COUNTER	message_data_counter
-#define	MESSAGE_DATA_LENGH		message_data_length
-#define	MESSAGE_DATA(x)			message_data[x]
-
-// ----------------------------------------------------------------------------
-// globale Variablen
+// Page number of the flash currently being written
 static uint16_t flashpage = 0;
-static uint8_t page_buffer_pos = 0;
-static uint8_t page_buffer[SPM_PAGESIZE];
+
+// Current read/write position within the flash page
+static uint8_t  flashpage_buffer_pos = 0;
+
+// Buffer for the flash page content
+static uint8_t  flashpage_buffer[SPM_PAGESIZE];
 
 // -----------------------------------------------------------------------------
 // Watchdog Timer als erstes im Programm deaktivieren
-// siehe http://www.nongnu.org/avr-libc/user-manual/group__avr__watchdog.html
-
+// see http://www.nongnu.org/avr-libc/user-manual/group__avr__watchdog.html
 void
 disable_watchdog(void) \
-		__attribute__((naked)) \
-		__attribute__((section(".init3")));
+		__attribute__((section(".init3"), naked, used));
 
 void
 disable_watchdog(void)
@@ -61,9 +58,9 @@ disable_watchdog(void)
 
 // ----------------------------------------------------------------------------
 /**
- * \brief	starts the application program
+ * Starts the application program.
  */
-void
+static void
 boot_jump_to_application(void)
 {
 	// relocate interrupt vectors
@@ -71,10 +68,6 @@ boot_jump_to_application(void)
 	
 	MCUCR = reg | (1 << IVCE);
 	MCUCR = reg;
-	
-	// reset SPI interface to power-up state
-	SPCR = 0;
-	SPSR = 0;
 	
 #if FLASHEND > 0xffff
 	__asm__ __volatile__(
@@ -89,41 +82,41 @@ boot_jump_to_application(void)
 	
 	// when the functions executes the 'ret' command to return to
 	// its origin the AVR loads the return address from the stack. Because we
-	// pushed null it instead jumps to address null which starts the main
+	// pushed zero it instead jumps to address zero which starts the main
 	// application.
 }
 
 // ----------------------------------------------------------------------------
 /**
- * \brief	write a complete page to the flash memorey
+ * Write a complete page to the flash memory
  * 
  * \param	page	page which should be written
  * \param	*buf	Pointer to the buffer with the data
  *
  * \see		avr-libc Documentation > Modules > Bootloader Support Utilities
  */
-void
+static void
 boot_program_page(uint16_t page, uint8_t *buf)
 {
-	uint32_t adr = page * SPM_PAGESIZE;
+	uint32_t address = page * SPM_PAGESIZE;
 	
-	boot_page_erase(adr);
-	boot_spm_busy_wait();	  // Wait until the memory is erased.
+	boot_page_erase(address);
+	boot_spm_busy_wait();		// Wait until the memory is erased.
 	
-	for (uint16_t i=0; i < SPM_PAGESIZE; i+=2)
+	for (uint16_t i = 0; i < SPM_PAGESIZE; i += 2)
 	{
 		// Set up little-endian word.
 		uint16_t w = *buf++;
-		w += (*buf++) << 8;
+		w |= (*buf++) << 8;
 		
-		boot_page_fill(adr + i, w);
+		boot_page_fill(address + i, w);
 	}
 	
-	boot_page_write(adr);		// Store buffer in flash page.
+	boot_page_write(address);	// Store buffer in flash page.
 	boot_spm_busy_wait();		// Wait until the memory is written.
 	
 	// Reenable RWW-section again. We need this if we want to jump back
-	// to the application after bootloading.
+	// to the application after loading the application.
 	boot_rww_enable();
 }
 
@@ -134,14 +127,15 @@ main(void) __attribute__((OS_main));
 int
 main(void)
 {
-	enum { 
+	enum
+	{
 		IDLE,
 		COLLECT_DATA,
 		RECEIVED_PAGE
 	} state = IDLE;
 	uint8_t next_message_number = -1;
 	
-	// do some addition initialization
+	// Do some addition initialization (if required)
 	BOOT_INIT;
 	
 	BOOT_LED_SET_OUTPUT;
@@ -153,26 +147,25 @@ main(void)
 	
 	at90can_init();
 	
-	// start timer
+	// Start timer
 	TCNT1 = TIMER_PRELOAD;
 	TCCR1A = 0;
 	TCCR1B = TIMER_PRESCALER;
 
-	// clear overflow-flag
-	TIMER_INTERRUPT_FLAG_REGISTER = (1 << TOV1);
+	// Clear overflow-flag
+	TIFR1 = (1 << TOV1);
 	
 	sei();
 
 	while (1)
 	{
 		uint8_t command;
-		uint16_t page;
 		static uint8_t next_message_data_counter;
 		
 		// wait until we receive a new message
 		while ((command = at90can_get_message()) == NO_MESSAGE)
 		{
-			if (TIMER_INTERRUPT_FLAG_REGISTER & (1 << TOV1))
+			if (TIFR1 & (1 << TOV1))
 			{
 				BOOT_LED_OFF;
 				
@@ -186,8 +179,9 @@ main(void)
 		
 		// check if the message is a request, otherwise reject it
 		if ((command & ~COMMAND_MASK) != REQUEST)
+		{
 			continue;
-		
+		}
 		command &= COMMAND_MASK;
 		
 		// check message number
@@ -212,8 +206,8 @@ main(void)
 			message_data[1] = PAGESIZE_IDENTIFIER;
 			
 			// number of writeable pages
-			message_data[2] = HIGH_BYTE(RWW_PAGES);
-			message_data[3] = LOW_BYTE(RWW_PAGES);
+			message_data[2] = (RWW_PAGES) >> 8;
+			message_data[3] = (RWW_PAGES) & 0xFF;
 			
 			at90can_send_message(IDENTIFY | SUCCESSFULL_RESPONSE, 4);
 			break;
@@ -221,30 +215,35 @@ main(void)
 		// --------------------------------------------------------------------
 		// set the current address in the page buffer
 		case SET_ADDRESS:
-			page = (message_data[0] << 8) | message_data[1];
+		{
+			uint16_t page = (message_data[0] << 8) | message_data[1];
+			uint16_t bufferpos = (message_data[2] << 8) | message_data[3];
 			
-			if (message_data_length == 4 && 
-					message_data[2] < (SPM_PAGESIZE / 4) &&
-					page < RWW_PAGES)
+			if ((message_data_length == 4)
+				&& (page < RWW_PAGES)
+				&& (bufferpos < (SPM_PAGESIZE / 4)))
 			{
 				flashpage = page;
-				page_buffer_pos = message_data[3];
+				flashpage_buffer_pos = bufferpos;
 				
 				state = COLLECT_DATA;
 				
 				at90can_send_message(SET_ADDRESS | SUCCESSFULL_RESPONSE, 4);
 			}
-			else {
+			else
+			{
 				goto error_response;
 			}
 			break;
-		
+		}
 		// --------------------------------------------------------------------
 		// collect data
 		case DATA:
+		{
 			if (message_data_length != 4 ||
-					page_buffer_pos >= (SPM_PAGESIZE / 4) ||
-					state == IDLE) {
+				flashpage_buffer_pos >= (SPM_PAGESIZE / 4) ||
+				state == IDLE)
+			{
 				state = IDLE;
 				goto error_response;
 			}
@@ -257,19 +256,20 @@ main(void)
 				state = COLLECT_DATA;
 			}
 			
-			if (message_data_counter != next_message_data_counter) {
+			if (message_data_counter != next_message_data_counter)
+			{
 				state = IDLE;
 				goto error_response;
 			}
 			next_message_data_counter--;
 			
 			// copy data
-			memcpy(page_buffer + page_buffer_pos * 4, &message_data[0], 4);
-			page_buffer_pos++;
+			memcpy(flashpage_buffer + flashpage_buffer_pos * 4, &message_data[0], 4);
+			flashpage_buffer_pos++;
 			
 			if (message_data_counter == 0)
 			{
-				if (page_buffer_pos == (SPM_PAGESIZE / 4))
+				if (flashpage_buffer_pos == (SPM_PAGESIZE / 4))
 				{
 					message_data[0] = flashpage >> 8;
 					message_data[1] = flashpage & 0xff;
@@ -279,8 +279,8 @@ main(void)
 						goto error_response;
 					}
 					
-					boot_program_page( flashpage, page_buffer );
-					page_buffer_pos = 0;
+					boot_program_page( flashpage, flashpage_buffer );
+					flashpage_buffer_pos = 0;
 					flashpage += 1;
 					
 					// send ACK
@@ -291,10 +291,10 @@ main(void)
 				}
 			}
 			break;
-		
-		// --------------------------------------------------------------------
+		}
 		// start the flashed application program
 		case START_APP:
+		{
 			at90can_send_message(START_APP | SUCCESSFULL_RESPONSE, 0);
 			
 			// wait for the mcp2515 to send the message
@@ -304,10 +304,11 @@ main(void)
 			BOOT_LED_OFF;
 			boot_jump_to_application();
 			break;
-		
+		}
+
 #if BOOTLOADER_TYPE > 0
-		// --------------------------------------------------------------------
 		case GET_FUSEBITS:
+		{
 			message_data[0] = boot_lock_fuse_bits_get(GET_LOCK_BITS);
 			message_data[1] = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
 			message_data[2] = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
@@ -315,94 +316,101 @@ main(void)
 			
 			at90can_send_message(GET_FUSEBITS | SUCCESSFULL_RESPONSE, 4);
 			break;
-		
-		// --------------------------------------------------------------------
+		}
 		case CHIP_ERASE:
+		{
 			// erase complete flash except the bootloader region
-			for (uint16_t i = 0; i < RWW_PAGES; i++ )
+			for (uint16_t page = 0; page < RWW_PAGES; ++page)
 			{
-				uint32_t adr = i * SPM_PAGESIZE;
+				uint32_t address = page * SPM_PAGESIZE;
 				
-				boot_page_erase( adr );
+				boot_page_erase(address);
 				boot_spm_busy_wait();
 			}
 			boot_rww_enable();
 			
 			at90can_send_message(CHIP_ERASE | SUCCESSFULL_RESPONSE, 0);
 			break;
-		
-		// Lese 1..6 Byte aus dem EEprom
+		}
+		// Read 1..4 Byte from the EEPROM
 		case READ_EEPROM:
-			if (message_length == 5 && MESSAGE_DATA[4] > 0 && MESSAGE_DATA[4] <= 6)
+		{
+			uint16_t eeprom_address = (message_data[0] << 8) | message_data[1];
+			uint8_t number_of_bytes = message_data[2];
+
+			if ((message_data_length == 3)
+				&& (number_of_bytes > 0)
+				&& (number_of_bytes <= 4)
+				&& (eeprom_address <= E2END))
 			{
-				uint16_t ee_ptr = (MESSAGE_DATA[2] << 8) | MESSAGE_DATA[3];
-				
-				if (ee_ptr <= E2END) {
-					message_length = MESSAGE_DATA[4] + 2;
-					eeprom_read_block(MESSAGE_DATA + 2, (void *) ee_ptr, MESSAGE_DATA[4]);
-					break;
-				}
+				eeprom_read_block(&message_data[0], (void *) eeprom_address, number_of_bytes);
+				at90can_send_message(READ_EEPROM | SUCCESSFULL_RESPONSE, number_of_bytes);
 			}
-			response = NACK;
+			else
+			{
+				goto error_response;
+			}
 			break;
-		
-		// schreibe 1..4 Byte ins EEprom
+		}
+		// write 1..2 Byte to the EEPROM
 		case WRITE_EEPROM:
-			if (message_length > 4) {
-				uint16_t ee_ptr = (MESSAGE_DATA[2] << 8) | MESSAGE_DATA[3];
-				
-				if (ee_ptr <= E2END) {
-					eeprom_write_block(MESSAGE_DATA + 4, (void *) ee_ptr, message_length - 4);
-					response = ACK;
-					break;
-				}
-			}
-			response = NACK;
-			break;
-		
-		// Lese 1..65556 Byte aus dem Flash. Bei mehr als 6 Zeichen
-		// wird das Ergebniss auf mehrere Nachrichten verteilt.
-		case READ_FLASH:
-			if (message_length == 6)
+		{
+			uint16_t eeprom_address = (message_data[0] << 8) | message_data[1];
+
+			if ((message_data_length >= 3) && (eeprom_address <= E2END))
 			{
-				uint16_t flash_ptr = (MESSAGE_DATA[2] << 8) | MESSAGE_DATA[3];
-				
-				if (flash_ptr <= FLASHEND)
-				{
-					uint16_t number = (MESSAGE_DATA[4] << 8) | MESSAGE_DATA[5];
-					
-					// Anzahl der zu senden Nachrichten bestimmen
-					div_t r = div(number, 6);
-					number = r.quot;
-					if (r.rem > 0)
-						number += 1;
-					
-					uint16_t counter = 0;
-					for (uint16_t i=0;i<number;i++)
-					{
-						if (i == r.quot)
-							// das letze Paket ist eventl. kuerzer
-							message_length = r.rem;
-						else
-							message_length = 6;
-						
-						// FIXME
-						//memcpy_P( MESSAGE_DATA + 2, (PGM_VOID_P) flash_ptr, message_length );
-						flash_ptr += message_length;
-						
-						MESSAGE_DATA[1] = counter;
-						counter = (counter + 1) & 0x3f;
-						
-						// Nachricht verschicken
-						at90can_send_message(0);
-					}
-					
-					response = ACK;
-					break;
-				}
+				eeprom_write_block(&message_data[2], (void *) eeprom_address, message_data_length - 2);
+				at90can_send_message(WRITE_EEPROM | SUCCESSFULL_RESPONSE, 0);
 			}
-			response = NACK;
+			else
+			{
+				goto error_response;
+			}
 			break;
+		}
+//		// Lese 1..65556 Byte aus dem Flash. Bei mehr als 6 Zeichen
+//		// wird das Ergebniss auf mehrere Nachrichten verteilt.
+//		case READ_FLASH:
+//			if (message_length == 6)
+//			{
+//				uint16_t flash_ptr = (MESSAGE_DATA[2] << 8) | MESSAGE_DATA[3];
+//
+//				if (flash_ptr <= FLASHEND)
+//				{
+//					uint16_t number = (MESSAGE_DATA[4] << 8) | MESSAGE_DATA[5];
+//
+//					// Anzahl der zu senden Nachrichten bestimmen
+//					div_t r = div(number, 6);
+//					number = r.quot;
+//					if (r.rem > 0)
+//						number += 1;
+//
+//					uint16_t counter = 0;
+//					for (uint16_t i=0;i<number;i++)
+//					{
+//						if (i == r.quot)
+//							// das letze Paket ist eventl. kuerzer
+//							message_length = r.rem;
+//						else
+//							message_length = 6;
+//
+//						// FIXME
+//						//memcpy_P( MESSAGE_DATA + 2, (PGM_VOID_P) flash_ptr, message_length );
+//						flash_ptr += message_length;
+//
+//						MESSAGE_DATA[1] = counter;
+//						counter = (counter + 1) & 0x3f;
+//
+//						// Nachricht verschicken
+//						at90can_send_message(0);
+//					}
+//
+//					response = ACK;
+//					break;
+//				}
+//			}
+//			response = NACK;
+//			break;
 #endif
 		
 		error_response:
