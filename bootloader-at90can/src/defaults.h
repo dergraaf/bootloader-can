@@ -123,11 +123,15 @@
 // TIMER_PRELOAD = 65536 - (0.5s * F_CPU) / 1024
 
 #if F_CPU == 16000000UL
-	#define	TIMER_PRESCALER		(1<<CS12)|(1<<CS10)		// Prescaler = 1024
+	// Prescaler = 1024
+	#define	TIMER_PRESCALER		((1 << CS12) | (1 << CS10))
 	#define	TIMER_PRELOAD		57724
 #else
 	#error	choosen F_CPU not supported yet!
 #endif
 
+
+#define CAN_IDENTIFIER_SEND			0x7FE
+#define CAN_IDENTIFIER_RECEIVE		0x7FF
 
 #endif	// DEFAULTS_H

@@ -17,6 +17,9 @@
 // ----------------------------------------------------------------------------
 volatile uint8_t at90can_messages_waiting;
 volatile uint8_t at90can_free_buffer;			//!< Stores the number of currently free MObs
+uint8_t at90can_bitrate;
+
+uint8_t message_board_id;
 
 uint8_t message_number;
 uint8_t message_data_counter;	
@@ -33,47 +36,100 @@ at90can_init(void)
 	// set CAN Bit Timing
 	// (see datasheet page 260)
 
-#if CAN_BITRATE == 10
-	// 10 kbps
-	CANBT1 = 0x7E;
-	CANBT2 = 0x6E;
-	CANBT3 = 0x7F;
-#elif CAN_BITRATE == 20
-	// 20 kbps
-	CANBT1 = 0x62;
-	CANBT2 = 0x0C;
-	CANBT3 = 0x37;
-#elif CAN_BITRATE == 50
-	// 50 kbps
-	CANBT1 = 0x26;
-	CANBT2 = 0x0C;
-	CANBT3 = 0x37;
-#elif CAN_BITRATE == 100
-	// 100 kbps
-	CANBT1 = 0x12;
-	CANBT2 = 0x0C;
-	CANBT3 = 0x37;
-#elif CAN_BITRATE == 125
-	// 125 kbps
-	CANBT1 = 0x0E;
-	CANBT2 = 0x0C;
-	CANBT3 = 0x37;
-#elif CAN_BITRATE == 250
-	// 250 kbps
-	CANBT1 = 0x06;
-	CANBT2 = 0x0C;
-	CANBT3 = 0x37;
-#elif CAN_BITRATE == 500
-	// 500 kbps
-	CANBT1 = 0x02;
-	CANBT2 = 0x0C;
-	CANBT3 = 0x37;
-#elif CAN_BITRATE == 1000
-	// 1 Mbps
-	CANBT1 = 0x00;
-	CANBT2 = 0x0C;
-	CANBT3 = 0x36;
-#endif
+	switch (at90can_bitrate)
+	{
+	case 0:
+		// 10 kbps
+		CANBT1 = 0x7E;
+		CANBT2 = 0x6E;
+		CANBT3 = 0x7F;
+		break;
+	case 1:
+		// 20 kbps
+		CANBT1 = 0x62;
+		CANBT2 = 0x0C;
+		CANBT3 = 0x37;
+		break;
+	case 2:
+		// 50 kbps
+		CANBT1 = 0x26;
+		CANBT2 = 0x0C;
+		CANBT3 = 0x37;
+		break;
+	case 3:
+		// 100 kbps
+		CANBT1 = 0x12;
+		CANBT2 = 0x0C;
+		CANBT3 = 0x37;
+		break;
+
+	default:
+	case 4:
+		// 125 kbps
+		CANBT1 = 0x0E;
+		CANBT2 = 0x0C;
+		CANBT3 = 0x37;
+		break;
+	case 5:
+		// 250 kbps
+		CANBT1 = 0x06;
+		CANBT2 = 0x0C;
+		CANBT3 = 0x37;
+		break;
+	case 6:
+		// 500 kbps
+		CANBT1 = 0x02;
+		CANBT2 = 0x0C;
+		CANBT3 = 0x37;
+		break;
+	case 7:
+		// 1 Mbps
+		CANBT1 = 0x00;
+		CANBT2 = 0x0C;
+		CANBT3 = 0x36;
+		break;
+	}
+//#if CAN_BITRATE == 10
+//	// 10 kbps
+//	CANBT1 = 0x7E;
+//	CANBT2 = 0x6E;
+//	CANBT3 = 0x7F;
+//#elif CAN_BITRATE == 20
+//	// 20 kbps
+//	CANBT1 = 0x62;
+//	CANBT2 = 0x0C;
+//	CANBT3 = 0x37;
+//#elif CAN_BITRATE == 50
+//	// 50 kbps
+//	CANBT1 = 0x26;
+//	CANBT2 = 0x0C;
+//	CANBT3 = 0x37;
+//#elif CAN_BITRATE == 100
+//	// 100 kbps
+//	CANBT1 = 0x12;
+//	CANBT2 = 0x0C;
+//	CANBT3 = 0x37;
+//#elif CAN_BITRATE == 125
+//	// 125 kbps
+//	CANBT1 = 0x0E;
+//	CANBT2 = 0x0C;
+//	CANBT3 = 0x37;
+//#elif CAN_BITRATE == 250
+//	// 250 kbps
+//	CANBT1 = 0x06;
+//	CANBT2 = 0x0C;
+//	CANBT3 = 0x37;
+//#elif CAN_BITRATE == 500
+//	// 500 kbps
+//	CANBT1 = 0x02;
+//	CANBT2 = 0x0C;
+//	CANBT3 = 0x37;
+//#elif CAN_BITRATE == 1000
+//	// 1 Mbps
+//	CANBT1 = 0x00;
+//	CANBT2 = 0x0C;
+//	CANBT3 = 0x36;
+//#endif
 	
 	// activate CAN transmit- and receive-interrupt
 	CANGIT = 0;
@@ -112,13 +168,13 @@ at90can_init(void)
 		// only standard, non-rtr frames with identifier 0x7ff
 		CANIDT4 = 0;
 		CANIDT3 = 0;
-		CANIDT2 = (uint8_t) (0x7ff << 5);
-		CANIDT1 = (uint8_t) (0x7ff >> 3);
+		CANIDT2 = (uint8_t) (CAN_IDENTIFIER_RECEIVE << 5);
+		CANIDT1 = (uint8_t) (CAN_IDENTIFIER_RECEIVE >> 3);
 		
 		CANIDM4 = (1 << IDEMSK) | (1 << RTRMSK);
 		CANIDM3 = 0;
-		CANIDM2 = (uint8_t) (0x7ff << 5);
-		CANIDM1 = (uint8_t) (0x7ff >> 3);
+		CANIDM2 = (uint8_t) (CAN_IDENTIFIER_RECEIVE << 5);
+		CANIDM1 = (uint8_t) (CAN_IDENTIFIER_RECEIVE >> 3);
 	}
 	
 	// enable interrupts for the MObs

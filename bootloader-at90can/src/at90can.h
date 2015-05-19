@@ -18,6 +18,10 @@
 extern volatile uint8_t at90can_messages_waiting;
 extern volatile uint8_t at90can_free_buffer;
 
+extern uint8_t at90can_bitrate;			///< Bitrate setting
+
+extern uint8_t message_board_id;
+
 extern uint8_t message_number;			//!< Running number of the messages
 extern uint8_t message_data_counter;	
 extern uint8_t message_data_length;		//!< Length of the data-field

@@ -145,6 +145,8 @@ main(void)
 	MCUCR = (1 << IVCE);
 	MCUCR = (1 << IVSEL);
 	
+	message_board_id = BOOTLOADER_BOARD_ID;
+
 	at90can_init();
 	
 	// Start timer
