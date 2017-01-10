@@ -90,6 +90,8 @@ AVRDUDE_PORT = usb
 #     (Note: 3 is not always the best optimization level. See avr-libc FAQ.)
 OPT = s
 
+FLTO = -flto
+
 # Debugging format.
 #     Native formats for AVR-GCC's -g are dwarf-2 [default] or stabs.
 #     AVR Studio 4.10 requires dwarf-2.
@@ -132,7 +134,7 @@ CPPDEFS += -DBOOTLOADER_BOARD_ID=$(BOOTLOADER_BOARD_ID)
 #    -adhlns...: create assembler listing
 CFLAGS = -g$(DEBUG)
 CFLAGS += $(CDEFS)
-CFLAGS += -O$(OPT)
+CFLAGS += -O$(OPT) $(FLTO)
 CFLAGS += -funsigned-char
 CFLAGS += -funsigned-bitfields
 CFLAGS += -fpack-struct
@@ -161,7 +163,7 @@ CFLAGS += $(CSTANDARD)
 #    -adhlns...: create assembler listing
 CPPFLAGS = -g$(DEBUG)
 CPPFLAGS += $(CPPDEFS)
-CPPFLAGS += -O$(OPT)
+CPPFLAGS += -O$(OPT) $(FLTO)
 CPPFLAGS += -funsigned-char
 CPPFLAGS += -funsigned-bitfields
 CPPFLAGS += -fpack-struct
@@ -187,7 +189,9 @@ CPPFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 #             files -- see avr-libc docs [FIXME: not yet described there]
 #  -listing-cont-lines: Sets the maximum number of continuation lines of hex
 #       dump that will be displayed for a given single line of source input.
-ASFLAGS  = $(ADEFS) -Wa,-adhlns=$(<:%.S=$(OBJDIR)/%.lst),-gstabs,--listing-cont-lines=100
+ASFLAGS  = $(ADEFS)
+ASFLAGS += $(FLTO)
+ASFLAGS += -Wa,-adhlns=$(<:%.S=$(OBJDIR)/%.lst),-gstabs,--listing-cont-lines=100
 ASFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 
 
@@ -239,7 +243,8 @@ EXTMEMOPTS =
 #  -Wl,...:     tell GCC to pass this to linker.
 #    -Map:      create map file
 #    --cref:    add cross reference to  map file
-LDFLAGS = -Wl,-Map=$(OBJDIR)/$(TARGET).map,--cref,--section-start=.text=$(BOOTSTART)
+LDFLAGS  = -Wl,-Map=$(OBJDIR)/$(TARGET).map,--cref,--section-start=.text=$(BOOTSTART)
+LDFLAGS += $(FLTO)
 #LDFLAGS += -nostartfiles
 #LDFLAGS += -nodefaultlibs
 LDFLAGS += $(EXTMEMOPTS)
