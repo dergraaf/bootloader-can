@@ -1,49 +1,8 @@
-# Hey Emacs, this is a -*- makefile -*-
-#----------------------------------------------------------------------------
-# WinAVR Makefile Template written by Eric B. Weddington, Jörg Wunsch, et al.
-#
-# Released to the Public Domain
-#
-# Additional material for this makefile was written by:
-# Peter Fleury
-# Tim Henigan
-# Colin O'Flynn
-# Reiner Patommel
-# Markus Pfaff
-# Sander Pool
-# Frederik Rouleau
-# Carlos Lamas
-#
-#----------------------------------------------------------------------------
-# On command line:
-#
-# make all = Make software.
-#
-# make clean = Clean out built project files.
-#
-# make coff = Convert ELF to AVR COFF.
-#
-# make extcoff = Convert ELF to AVR Extended COFF.
-#
-# make program = Download the hex file to the device, using avrdude.
-#                Please customize the avrdude settings below first!
-#
-# make debug = Start either simulavr or avarice as specified for debugging,
-#              with avr-gdb or avr-insight as the front end for debugging.
-#
-# make filename.s = Just compile filename.c into the assembler code only.
-#
-# make filename.i = Create a preprocessed source file for use in submitting
-#                   bug reports to the GCC project.
-#
-# To rebuild project do "make clean" then "make all".
-#----------------------------------------------------------------------------
-
 
 # MCU name
 #MCU = atmega8
 #MCU = atmega88
-MCU = atmega168
+#MCU = atmega168
 MCU = atmega328p
 #MCU = atmega16
 #MCU = atmega32
@@ -106,8 +65,6 @@ CPPSRC =
 ASRC = mcp2515_asm.S
 
 # Programming Options
-#AVRDUDE_PROGRAMMER = stk500
-#AVRDUDE_PORT = /dev/ttyUSB0
 AVRDUDE_PROGRAMMER = avrispmkII
 AVRDUDE_PORT = usb
 
@@ -115,6 +72,8 @@ AVRDUDE_PORT = usb
 #     0 = turn off optimization. s = optimize for size.
 #     (Note: 3 is not always the best optimization level. See avr-libc FAQ.)
 OPT = s
+
+FLTO = -flto
 
 # Debugging format.
 #     Native formats for AVR-GCC's -g are dwarf-2 [default] or stabs.
@@ -129,7 +88,6 @@ OPT = s
 EXTRAINCDIRS =
 
 EXTRALIBS =
-# -luart
 
 # Compiler flag to set the C Standard level.
 #     c89   = "ANSI" C
@@ -161,7 +119,7 @@ CPPDEFS += -DBOOTLOADER_BOARD_ID=$(BOOTLOADER_BOARD_ID)
 #    -adhlns...: create assembler listing
 CFLAGS = -g$(DEBUG)
 CFLAGS += $(CDEFS)
-CFLAGS += -O$(OPT)
+CFLAGS += -O$(OPT) $(FLTO)
 CFLAGS += -funsigned-char
 CFLAGS += -funsigned-bitfields
 CFLAGS += -fpack-struct
@@ -188,7 +146,7 @@ CFLAGS += $(CSTANDARD)
 #    -adhlns...: create assembler listing
 CPPFLAGS = -g$(DEBUG)
 CPPFLAGS += $(CPPDEFS)
-CPPFLAGS += -O$(OPT)
+CPPFLAGS += -O$(OPT) $(FLTO)
 CPPFLAGS += -funsigned-char
 CPPFLAGS += -funsigned-bitfields
 CPPFLAGS += -fpack-struct
@@ -214,7 +172,9 @@ CPPFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 #             files -- see avr-libc docs [FIXME: not yet described there]
 #  -listing-cont-lines: Sets the maximum number of continuation lines of hex
 #       dump that will be displayed for a given single line of source input.
-ASFLAGS  = $(ADEFS) -Wa,-adhlns=$(<:%.S=$(OBJDIR)/%.lst),-gstabs,--listing-cont-lines=100
+ASFLAGS  = $(ADEFS)
+ASFLAGS += $(FLTO)
+ASFLAGS += -Wa,-adhlns=$(<:%.S=$(OBJDIR)/%.lst),-gstabs,--listing-cont-lines=100
 ASFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 
 
@@ -250,31 +210,17 @@ MATH_LIB = -lm
 #     For a directory that has spaces, enclose it in quotes.
 EXTRALIBDIRS = .
 
-#---------------- External Memory Options ----------------
-
-# 64 KB of external RAM, starting after internal RAM (ATmega128!),
-# used for variables (.data/.bss) and heap (malloc()).
-#EXTMEMOPTS = -Wl,-Tdata=0x801100,--defsym=__heap_end=0x80ffff
-
-# 64 KB of external RAM, starting after internal RAM (ATmega128!),
-# only used for heap (malloc()).
-#EXTMEMOPTS = -Wl,--section-start,.data=0x801100,--defsym=__heap_end=0x80ffff
-
-EXTMEMOPTS =
-
 #---------------- Linker Options ----------------
 #  -Wl,...:     tell GCC to pass this to linker.
 #    -Map:      create map file
 #    --cref:    add cross reference to  map file
-LDFLAGS = -Wl,-Map=$(OBJDIR)/$(TARGET).map,--cref,--section-start=.text=$(BOOTSTART)
+LDFLAGS  = -Wl,-Map=$(OBJDIR)/$(TARGET).map,--cref,--section-start=.text=$(BOOTSTART)
+LDFLAGS += $(FLTO)
 LDFLAGS += -nostartfiles
 LDFLAGS += -nodefaultlibs
 LDFLAGS += $(EXTMEMOPTS)
 LDFLAGS += $(patsubst %,-L%,$(EXTRALIBDIRS))
 LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB) $(EXTRALIBS)
-#LDFLAGS += -T linker_script.x
-
-
 
 #---------------- Programming Options (avrdude) ----------------
 
@@ -296,38 +242,6 @@ AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER)
 AVRDUDE_FLAGS += $(AVRDUDE_NO_VERIFY)
 AVRDUDE_FLAGS += $(AVRDUDE_VERBOSE)
 AVRDUDE_FLAGS += $(AVRDUDE_ERASE_COUNTER)
-
-#---------------- Debugging Options ----------------
-
-# For simulavr only - target MCU frequency.
-DEBUG_MFREQ = $(F_CPU)
-
-# Set the DEBUG_UI to either gdb or insight.
-# DEBUG_UI = gdb
-DEBUG_UI = insight
-
-# Set the debugging back-end to either avarice, simulavr.
-DEBUG_BACKEND = avarice
-#DEBUG_BACKEND = simulavr
-
-# GDB Init Filename.
-GDBINIT_FILE = __avr_gdbinit
-
-# When using avarice settings for the JTAG
-JTAG_DEV = /dev/com1
-
-# Debugging port used to communicate between GDB / avarice / simulavr.
-DEBUG_PORT = 4242
-
-# Debugging host used to communicate between GDB / avarice / simulavr, normally
-#     just set to localhost unless doing some sort of crazy debugging when
-#     avarice is running on a different computer.
-DEBUG_HOST = localhost
-
-
-
-#============================================================================
-
 
 # Define programs and commands.
 SHELL = sh
@@ -431,35 +345,6 @@ gccversion :
 # Program the device.
 program: $(TARGET).hex $(OBJDIR)/$(TARGET).eep
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)
-
-
-# Generate avr-gdb config/init file which does the following:
-#     define the reset signal, load the target file, connect to target, and set
-#     a breakpoint at main().
-gdb-config:
-	@$(REMOVE) $(GDBINIT_FILE)
-	@echo define reset >> $(GDBINIT_FILE)
-	@echo SIGNAL SIGHUP >> $(GDBINIT_FILE)
-	@echo end >> $(GDBINIT_FILE)
-	@echo file $(OBJDIR)/$(TARGET).elf >> $(GDBINIT_FILE)
-	@echo target remote $(DEBUG_HOST):$(DEBUG_PORT)  >> $(GDBINIT_FILE)
-ifeq ($(DEBUG_BACKEND),simulavr)
-	@echo load  >> $(GDBINIT_FILE)
-endif
-	@echo break main >> $(GDBINIT_FILE)
-
-debug: gdb-config $(OBJDIR)/$(TARGET).elf
-ifeq ($(DEBUG_BACKEND), avarice)
-	@echo Starting AVaRICE - Press enter when "waiting to connect" message displays.
-	@$(WINSHELL) /c start avarice --jtag $(JTAG_DEV) --erase --program --file \
-	$(OBJDIR)/$(TARGET).elf $(DEBUG_HOST):$(DEBUG_PORT)
-	@$(WINSHELL) /c pause
-
-else
-	@$(WINSHELL) /c start simulavr --gdbserver --device $(MCU) --clock-freq \
-	$(DEBUG_MFREQ) --port $(DEBUG_PORT)
-endif
-	@$(WINSHELL) /c start avr-$(DEBUG_UI) --command=$(GDBINIT_FILE)
 
 
 # Convert ELF to COFF for use in debugging / simulating in AVR Studio or VMLAB.

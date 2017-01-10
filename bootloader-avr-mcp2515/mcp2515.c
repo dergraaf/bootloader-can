@@ -21,7 +21,7 @@ void
 mcp2515_write_register(uint8_t adress, uint8_t data);
 
 
-static uint8_t PROGMEM mcp2515_register_map[45] = {
+static uint8_t const PROGMEM mcp2515_register_map[45] = {
     0xff, 0xc0, 0x00, 0x00,             // Filter 0
     0xff, 0xc0, 0x00, 0x00,             // Filter 1
     0xff, 0xc0, 0x00, 0x00,             // Filter 2
@@ -47,8 +47,7 @@ static uint8_t PROGMEM mcp2515_register_map[45] = {
 
 
 // abgespeckte Variante der "normalen" MCP2515 Initialisierung
-void mcp2515_init(void) __attribute__((naked)) \
-                        __attribute__((section(".init3")));
+void mcp2515_init(void) __attribute__((section(".init3"), naked, used));
 void mcp2515_init(void)
 {
     // Aktivieren der Pins fuer das SPI Interface

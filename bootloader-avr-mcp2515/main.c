@@ -39,7 +39,6 @@ static uint16_t flashpage = 0;
 static uint8_t page_buffer_pos = 0;
 static uint8_t page_buffer[SPM_PAGESIZE];
 
-// ----------------------------------------------------------------------------
 /**
  * \brief   starts the application program
  */
@@ -73,7 +72,6 @@ boot_jump_to_application(void)
     // application.
 }
 
-// ----------------------------------------------------------------------------
 /**
  * \brief   write a complete page to the flash memorey
  *
@@ -107,11 +105,8 @@ boot_program_page(uint16_t page, uint8_t *buf)
     boot_rww_enable();
 }
 
-// ----------------------------------------------------------------------------
 void
-boot(void) \
-        __attribute__((naked)) \
-        __attribute__((section(".vectors")));
+boot(void) __attribute__((section(".vectors"), naked, used));
 
 void
 boot(void)
@@ -121,9 +116,7 @@ boot(void)
 
 
 void
-init(void) \
-        __attribute__((naked)) \
-        __attribute__((section(".init2")));
+init(void) __attribute__((section(".init2"), naked, used));
 
 void
 init(void)
@@ -159,8 +152,7 @@ init(void)
 
 
 int
-main(void) __attribute__((naked)) \
-        __attribute__((section(".init9")));
+main(void) __attribute__((section(".init9"), naked, used));
 
 int
 main(void)
