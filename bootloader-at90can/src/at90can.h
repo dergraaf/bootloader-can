@@ -29,13 +29,13 @@ extern uint8_t message_data[4];
 
 typedef enum
 {
-	// every bootloader type has this commands
+	// Every bootloader type has the following commands
 	IDENTIFY		= 1,
 	SET_ADDRESS		= 2,
 	DATA			= 3,
 	START_APP		= 4,
 	
-	// only avilable in the "bigger" versions
+	// only available in type >= 1
 	READ_FLASH		= 5,
 	GET_FUSEBITS	= 6,
 	CHIP_ERASE		= 7,
@@ -43,13 +43,31 @@ typedef enum
 	READ_EEPROM		= 8,
 	WRITE_EEPROM	= 9,
 
+	// only available in type >= 2
+	SET_BITRATE		= 10,
+	SET_BOARD_ID	= 11,
+
+
+	// Message Type
 	REQUEST					= 0x00,
 	SUCCESSFULL_RESPONSE	= 0x40,
 	ERROR_RESPONSE			= 0x80,
 	WRONG_NUMBER_REPSONSE	= 0xC0,
 	
-	NO_MESSAGE		= 0x3f
+	NO_MESSAGE		= 0x3F
 } command_t;
+
+typedef enum
+{
+	BITRATE_10_KBPS = 0,
+	BITRATE_20_KBPS = 1,
+	BITRATE_50_KBPS = 2,
+	BITRATE_100_KBPS = 3,
+	BITRATE_125_KBPS = 4,
+	BITRATE_250_KBPS = 5,
+	BITRATE_500_KBPS = 6,
+	BITRATE_1_MBPS = 7
+} bitrate_t;
 
 #define	COMMAND_MASK			0x3F
 #define	START_OF_MESSAGE_MASK	0x80

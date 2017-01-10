@@ -7,5 +7,5 @@
  */
 // ----------------------------------------------------------------------------
 
-#define	BOOTLOADER_TYPE			1
+#define	BOOTLOADER_TYPE			2
 #define	BOOT_LED				E,4

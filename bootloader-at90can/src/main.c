@@ -308,7 +308,7 @@ main(void)
 			break;
 		}
 
-#if BOOTLOADER_TYPE > 0
+#if BOOTLOADER_TYPE == 1 || BOOTLOADER_TYPE == 2
 		// Read four bytes from the flash memory
 		case READ_FLASH:
 		{
@@ -384,6 +384,39 @@ main(void)
 			{
 				eeprom_write_block(&message_data[2], (void *) eeprom_address, message_data_length - 2);
 				at90can_send_message(WRITE_EEPROM | SUCCESSFULL_RESPONSE, 0);
+			}
+			else
+			{
+				goto error_response;
+			}
+			break;
+		}
+#endif
+#if BOOTLOADER_TYPE == 2
+		case SET_BITRATE:
+		{
+			uint8_t bitrate = message_data[0];
+
+			if (message_data_length == 1
+				&& (bitrate < BITRATE_1_MBPS))
+			{
+				// TODO write EEPROM
+				at90can_send_message(SET_BITRATE | SUCCESSFULL_RESPONSE, 0);
+			}
+			else
+			{
+				goto error_response;
+			}
+			break;
+		}
+
+		case SET_BOARD_ID:
+		{
+
+			if (message_data_length == 1)
+			{
+				// TODO write EEPROM
+				at90can_send_message(SET_BOARD_ID | SUCCESSFULL_RESPONSE, 0);
 			}
 			else
 			{
