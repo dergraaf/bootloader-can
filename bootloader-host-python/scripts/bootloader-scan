@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2010, 2016-2017 Fabian Greif
+# Copyright (c) 2010, 2015-2017 Fabian Greif
 # All rights reserved.
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
@@ -20,14 +20,12 @@ import bootloader
 parser = argparse.ArgumentParser(
         usage   = "%(prog)s [options] -i BOARD_ID -f FILE")
 parser.add_argument('--version', action='version', version=bootloader.bootloader.version)
-parser.add_argument("-f", "--file", dest="filename", metavar="FILE",
-        help="AVR .hex File")
 parser.add_argument("-p", "--port", dest="port",
         default="/dev/ttyUSB0",
         help="serial port (default is '/dev/ttyUSB0')")
 parser.add_argument("-b", "--baud", dest="baudrate",
-        default="115200",
-        help="baudrate (default is '115200')")
+         default="115200",
+         help="baudrate (default is '115200')")
 parser.add_argument("--bitrate", dest="bitrate", default=4, type=int,
         help="""Set CAN Bitrate (0..8):
 
@@ -41,14 +39,10 @@ parser.add_argument("--bitrate", dest="bitrate", default=4, type=int,
 7: 800Kbit
 8: 1Mbit
 """)
-parser.add_argument("-i", "--id", dest="id", help="id of the board to program")
-parser.add_argument("-e", "--erase", action="count", help="erase Chip befor programming")
-parser.add_argument("-s", "--start", dest="start_app", default=False, action='store_true',
-        help="start Application (only evaluated if FILE is not specified)")
-parser.add_argument("-v", "--verify", dest="verify", default=False, action='store_true',
-        help="Verify the content after programming (requires an extended bootlaoder)")
 parser.add_argument("-c", "--config", action="count",
         help="prints the configuration of the bootloader")
+parser.add_argument("-s", "--start", dest="start_app", default=False, action='store_true',
+        help="Start Application after operation")
 parser.add_argument("-d", "--debug", action="count",
          help="prints additional debug information while sending the programm")
 parser.add_argument("-t", "--type", dest="type", default="can2usb",
@@ -56,27 +50,16 @@ parser.add_argument("-t", "--type", dest="type", default="can2usb",
 
 args = parser.parse_args()
 
-if not args.id or (not args.filename and not args.start_app) or (args.bitrate < 0) or (args.bitrate > 8):
+if (args.bitrate < 0) or (args.bitrate > 8):
     print(parser.get_usage())
     exit(1)
 
-board_id = int(args.id, 0)
 debug_mode = True if (args.debug) else False
 
 print("CAN Bootloader\n")
 print("Port      : %s" % args.port)
-print("Board Id  : %i (0x%02x)" % (board_id, board_id))
 if debug_mode:
     print("debug mode active!")
-
-if args.filename:
-    print("File      : %s" % args.filename)
-
-    hexfile = bootloader.util.intelhex.IntelHexParser(args.filename)
-    if len(hexfile.segments) > 1:
-        print("            File has %i segments %s bytes" % (len(hexfile.segments), map(lambda x: len(x), hexfile.segments)))
-
-    print("Size      : %i Bytes" % functools.reduce(lambda x,y: x + y, map(lambda x: len(x), hexfile.segments)))
 
 # create a connection to the can bus
 if args.type == "can2usb":
@@ -97,13 +80,15 @@ else:
 interface.connect()
 
 try:
-    client = bootloader.bootloader.CommandlineClient(board_id, interface, debug = debug_mode)
-    client.start_bootloader()
-    if args.filename:
-        client.program(hexfile.segments)
-        if args.verify:
-            client.verify(hexfile.segments)
-    client.start_app()
+    client = bootloader.bootloader.CommandlineClient(0, interface, debug = debug_mode)
+    found = client.scan()
+
+    if args.start_app:
+        for board in found:
+            client.board = bootloader.bootloader.ProgrammeableBoard(board)
+            client.msg_number = 0
+
+            client.start_app()
 except bootloader.bootloader.BootloaderException as msg:
     print("Error: %s" % msg)
 except KeyboardInterrupt as msg:
